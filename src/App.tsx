@@ -2,38 +2,37 @@ import { useEffect, useState } from 'react'
 import { CallDetails } from './components/CallDetails'
 import { CallList } from './components/CallList'
 import { StatusMessage } from './components/StatusMessage'
-import { getCalls } from './services/callService'
-import type { Call } from './types/call'
-import { getErrorMessage } from './utils/errors'
+import {
+  archiveCall,
+  archiveErrorDismissed,
+  fetchCalls,
+  selectArchiveError,
+  selectCalls,
+  selectCallsError,
+  selectCallsStatus,
+} from './store/callsSlice'
+import { useAppDispatch, useAppSelector } from './store/hooks'
 import './App.css'
 
-type CallsState =
-  | { status: 'loading' }
-  | { status: 'error'; message: string }
-  | { status: 'success'; calls: Call[] }
-
 function App() {
-  const [callsState, setCallsState] = useState<CallsState>({ status: 'loading' })
-  const [reloadCount, setReloadCount] = useState(0)
+  const dispatch = useAppDispatch()
+  const calls = useAppSelector(selectCalls)
+  const callsStatus = useAppSelector(selectCallsStatus)
+  const callsError = useAppSelector(selectCallsError)
+  const archiveError = useAppSelector(selectArchiveError)
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null)
 
   useEffect(() => {
-    const controller = new AbortController()
+    const request = dispatch(fetchCalls())
+    return () => request.abort()
+  }, [dispatch])
 
-    getCalls(controller.signal)
-      .then((calls) => setCallsState({ status: 'success', calls }))
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return
-        setCallsState({ status: 'error', message: getErrorMessage(error) })
-      })
-
-    return () => controller.abort()
-  }, [reloadCount])
-
-  function handleRetry() {
-    setCallsState({ status: 'loading' })
-    setReloadCount((count) => count + 1)
+  function handleArchive(callId: string) {
+    setSelectedCallId(null)
+    dispatch(archiveCall(callId))
   }
+
+  const isLoading = callsStatus === 'idle' || callsStatus === 'loading'
 
   return (
     <main className="app">
@@ -41,20 +40,34 @@ function App() {
         <h1>Call activity</h1>
       </header>
 
+      {archiveError && (
+        <div className="app__banner">
+          <StatusMessage
+            tone="error"
+            message={`Could not archive the call: ${archiveError}`}
+            action={{ label: 'Dismiss', onClick: () => dispatch(archiveErrorDismissed()) }}
+          />
+        </div>
+      )}
+
       <div className={`layout${selectedCallId ? ' layout--with-details' : ''}`}>
         <section aria-label="Call feed">
-          {callsState.status === 'loading' && <StatusMessage tone="loading" message="Loading calls…" />}
+          {isLoading && <StatusMessage tone="loading" message="Loading calls…" />}
 
-          {callsState.status === 'error' && (
-            <StatusMessage tone="error" message={callsState.message} onRetry={handleRetry} />
+          {callsStatus === 'failed' && (
+            <StatusMessage
+              tone="error"
+              message={callsError ?? 'Could not load calls.'}
+              action={{ label: 'Try again', onClick: () => dispatch(fetchCalls()) }}
+            />
           )}
 
-          {callsState.status === 'success' &&
-            (callsState.calls.length === 0 ? (
+          {callsStatus === 'succeeded' &&
+            (calls.length === 0 ? (
               <StatusMessage message="No active calls." />
             ) : (
               <CallList
-                calls={callsState.calls}
+                calls={calls}
                 selectedCallId={selectedCallId}
                 onSelectCall={setSelectedCallId}
               />
@@ -66,6 +79,7 @@ function App() {
             key={selectedCallId}
             callId={selectedCallId}
             onClose={() => setSelectedCallId(null)}
+            onArchive={handleArchive}
           />
         )}
       </div>

@@ -235,3 +235,19 @@
 .capitalize {
   text-transform: capitalize;
 }
+
+.app__banner {
+  margin-bottom: 16px;
+}
+
+.button--danger {
+  align-self: flex-start;
+  color: var(--missed);
+  border-color: var(--missed);
+}
+
+.button--danger:hover {
+  color: var(--surface);
+  background: var(--missed);
+  border-color: var(--missed);
+}

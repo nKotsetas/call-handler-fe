@@ -14,9 +14,10 @@ type DetailState =
 interface CallDetailsProps {
   callId: string
   onClose: () => void
+  onArchive: (callId: string) => void
 }
 
-export function CallDetails({ callId, onClose }: CallDetailsProps) {
+export function CallDetails({ callId, onClose, onArchive }: CallDetailsProps) {
   const [detailState, setDetailState] = useState<DetailState>({ status: 'loading' })
 
   useEffect(() => {
@@ -53,7 +54,14 @@ export function CallDetails({ callId, onClose }: CallDetailsProps) {
 
       {detailState.status === 'error' && <StatusMessage tone="error" message={detailState.message} />}
 
-      {detailState.status === 'success' && <CallDetailsBody call={detailState.call} />}
+      {detailState.status === 'success' && (
+        <>
+          <CallDetailsBody call={detailState.call} />
+          <button type="button" className="button button--danger" onClick={() => onArchive(callId)}>
+            Archive call
+          </button>
+        </>
+      )}
     </aside>
   )
 }
