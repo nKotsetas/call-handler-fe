@@ -1,15 +1,7 @@
-import { useEffect, useState } from 'react'
-import { ApiError, getCall } from '../services/callService'
+import { useCallDetail } from '../hooks/useCallDetail'
 import type { CallDetail } from '../types/call'
-import { getErrorMessage } from '../utils/errors'
 import { formatDateTime, formatDuration } from '../utils/format'
 import { StatusMessage } from './StatusMessage'
-
-type DetailState =
-  | { status: 'loading' }
-  | { status: 'not-found' }
-  | { status: 'error'; message: string }
-  | { status: 'success'; call: CallDetail }
 
 interface CallDetailsProps {
   callId: string
@@ -18,24 +10,7 @@ interface CallDetailsProps {
 }
 
 export function CallDetails({ callId, onClose, onArchive }: CallDetailsProps) {
-  const [detailState, setDetailState] = useState<DetailState>({ status: 'loading' })
-
-  useEffect(() => {
-    const controller = new AbortController()
-
-    getCall(callId, controller.signal)
-      .then((call) => setDetailState({ status: 'success', call }))
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return
-        if (error instanceof ApiError && error.status === 404) {
-          setDetailState({ status: 'not-found' })
-          return
-        }
-        setDetailState({ status: 'error', message: getErrorMessage(error) })
-      })
-
-    return () => controller.abort()
-  }, [callId])
+  const detailState = useCallDetail(callId)
 
   return (
     <aside className="call-details" aria-label="Call details">
