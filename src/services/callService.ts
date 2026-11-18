@@ -1,7 +1,6 @@
 import type { Call, CallDetail } from '../types/call'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-const USER_ID = import.meta.env.VITE_USER_ID
 
 export class ApiError extends Error {
   readonly status: number
@@ -26,9 +25,9 @@ async function readErrorMessage(response: Response): Promise<string> {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(userId: string, path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
-  headers.set('X-User-Id', USER_ID)
+  headers.set('X-User-Id', userId)
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers })
 
@@ -39,15 +38,18 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await response.json()) as T
 }
 
-export async function getCalls(signal?: AbortSignal): Promise<Call[]> {
-  const data = await request<{ calls: Call[] }>('/calls', { signal })
+export async function getCalls(userId: string, signal?: AbortSignal): Promise<Call[]> {
+  const data = await request<{ calls: Call[] }>(userId, '/calls', { signal })
   return data.calls
 }
 
-export function getCall(callId: string, signal?: AbortSignal): Promise<CallDetail> {
-  return request<CallDetail>(`/calls/${encodeURIComponent(callId)}`, { signal })
+export function getCall(userId: string, callId: string, signal?: AbortSignal): Promise<CallDetail> {
+  return request<CallDetail>(userId, `/calls/${encodeURIComponent(callId)}`, { signal })
 }
 
-export function archiveCall(callId: string): Promise<Call> {
-  return request<Call>(`/calls/${encodeURIComponent(callId)}/archive`, { method: 'PATCH' })
+export function archiveCall(userId: string, callId: string, signal?: AbortSignal): Promise<Call> {
+  return request<Call>(userId, `/calls/${encodeURIComponent(callId)}/archive`, {
+    method: 'PATCH',
+    signal,
+  })
 }

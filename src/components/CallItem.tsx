@@ -1,13 +1,14 @@
+import { useCallSelection } from '../context/callSelectionContext'
 import type { Call } from '../types/call'
 import { formatDateTime } from '../utils/format'
 
 interface CallItemProps {
   call: Call
-  isSelected: boolean
-  onSelect: (callId: string) => void
 }
 
-export function CallItem({ call, isSelected, onSelect }: CallItemProps) {
+export function CallItem({ call }: CallItemProps) {
+  const { selectedCallId, selectCall } = useCallSelection()
+  const isSelected = call.id === selectedCallId
   const directionIcon = call.direction === 'inbound' ? '↙' : '↗'
 
   return (
@@ -15,7 +16,7 @@ export function CallItem({ call, isSelected, onSelect }: CallItemProps) {
       type="button"
       className={`call-item${isSelected ? ' call-item--selected' : ''}`}
       aria-current={isSelected ? 'true' : undefined}
-      onClick={() => onSelect(call.id)}
+      onClick={() => selectCall(call.id)}
     >
       <span className={`call-item__direction call-item__direction--${call.direction}`}>
         <span aria-hidden="true">{directionIcon}</span> {call.direction}

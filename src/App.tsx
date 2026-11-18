@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { CallDetails } from './components/CallDetails'
 import { CallList } from './components/CallList'
 import { StatusMessage } from './components/StatusMessage'
+import { ThemeToggle } from './components/ThemeToggle'
+import { UserMenu } from './components/UserMenu'
+import { useCurrentUser } from './context/authContext'
+import { useCallSelection } from './context/callSelectionContext'
 import {
   archiveCall,
   archiveErrorDismissed,
+  callsReset,
   fetchCalls,
   selectArchiveError,
   selectCalls,
@@ -20,16 +25,39 @@ function App() {
   const callsStatus = useAppSelector(selectCallsStatus)
   const callsError = useAppSelector(selectCallsError)
   const archiveError = useAppSelector(selectArchiveError)
-  const [selectedCallId, setSelectedCallId] = useState<string | null>(null)
+  const { id: userId } = useCurrentUser()
+  const { selectedCallId, clearSelection } = useCallSelection()
+  const inFlightRequests = useRef(new Set<{ abort: () => void }>())
 
   useEffect(() => {
-    const request = dispatch(fetchCalls())
+    const request = dispatch(fetchCalls(userId))
     return () => request.abort()
-  }, [dispatch])
+  }, [dispatch, userId])
+
+  // When the session ends (logout unmounts App), cancel in-flight requests and drop
+  // the previous user's calls so the next user starts from a clean slice.
+  useEffect(() => {
+    const requests = inFlightRequests.current
+    return () => {
+      requests.forEach((request) => request.abort())
+      requests.clear()
+      dispatch(callsReset())
+    }
+  }, [dispatch, userId])
+
+  function track(request: Promise<unknown> & { abort: () => void }) {
+    const requests = inFlightRequests.current
+    requests.add(request)
+    void request.finally(() => requests.delete(request))
+  }
 
   function handleArchive(callId: string) {
-    setSelectedCallId(null)
-    dispatch(archiveCall(callId))
+    clearSelection()
+    track(dispatch(archiveCall({ userId, callId })))
+  }
+
+  function handleRetry() {
+    track(dispatch(fetchCalls(userId)))
   }
 
   const isLoading = callsStatus === 'idle' || callsStatus === 'loading'
@@ -38,6 +66,10 @@ function App() {
     <main className="app">
       <header className="app__header">
         <h1>Call activity</h1>
+        <div className="app__actions">
+          <UserMenu />
+          <ThemeToggle />
+        </div>
       </header>
 
       {archiveError && (
@@ -58,7 +90,7 @@ function App() {
             <StatusMessage
               tone="error"
               message={callsError ?? 'Could not load calls.'}
-              action={{ label: 'Try again', onClick: () => dispatch(fetchCalls()) }}
+              action={{ label: 'Try again', onClick: handleRetry }}
             />
           )}
 
@@ -66,11 +98,7 @@ function App() {
             (calls.length === 0 ? (
               <StatusMessage message="No active calls." />
             ) : (
-              <CallList
-                calls={calls}
-                selectedCallId={selectedCallId}
-                onSelectCall={setSelectedCallId}
-              />
+              <CallList calls={calls} />
             ))}
         </section>
 
@@ -78,7 +106,7 @@ function App() {
           <CallDetails
             key={selectedCallId}
             callId={selectedCallId}
-            onClose={() => setSelectedCallId(null)}
+            onClose={clearSelection}
             onArchive={handleArchive}
           />
         )}

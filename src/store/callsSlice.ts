@@ -25,22 +25,27 @@ const initialState: CallsState = {
   archiveError: null,
 }
 
-export const fetchCalls = createAsyncThunk<Call[], void, { rejectValue: string }>(
+export const fetchCalls = createAsyncThunk<Call[], string, { rejectValue: string }>(
   'calls/fetchCalls',
-  async (_, { signal, rejectWithValue }) => {
+  async (userId, { signal, rejectWithValue }) => {
     try {
-      return await getCalls(signal)
+      return await getCalls(userId, signal)
     } catch (error) {
       return rejectWithValue(getErrorMessage(error))
     }
   },
 )
 
-export const archiveCall = createAsyncThunk<Call, string, { rejectValue: string }>(
+interface ArchiveCallArgs {
+  userId: string
+  callId: string
+}
+
+export const archiveCall = createAsyncThunk<Call, ArchiveCallArgs, { rejectValue: string }>(
   'calls/archiveCall',
-  async (callId, { rejectWithValue }) => {
+  async ({ userId, callId }, { signal, rejectWithValue }) => {
     try {
-      return await archiveCallRequest(callId)
+      return await archiveCallRequest(userId, callId, signal)
     } catch (error) {
       return rejectWithValue(getErrorMessage(error))
     }
@@ -53,6 +58,10 @@ const callsSlice = createSlice({
   reducers: {
     archiveErrorDismissed(state) {
       state.archiveError = null
+    },
+    /** Clears everything from the previous session, e.g. on logout. */
+    callsReset() {
+      return initialState
     },
   },
   extraReducers: (builder) => {
@@ -71,7 +80,7 @@ const callsSlice = createSlice({
         state.error = action.payload ?? 'Could not load calls.'
       })
       .addCase(archiveCall.pending, (state, action) => {
-        const callId = action.meta.arg
+        const { callId } = action.meta.arg
         const index = state.items.findIndex((call) => call.id === callId)
         if (index === -1) return
         state.pendingArchives[callId] = { call: state.items[index], index }
@@ -79,10 +88,12 @@ const callsSlice = createSlice({
         state.archiveError = null
       })
       .addCase(archiveCall.fulfilled, (state, action) => {
-        delete state.pendingArchives[action.meta.arg]
+        delete state.pendingArchives[action.meta.arg.callId]
       })
       .addCase(archiveCall.rejected, (state, action) => {
-        const callId = action.meta.arg
+        // Aborted on logout: the state was already reset, so there is nothing to roll back.
+        if (action.meta.aborted) return
+        const { callId } = action.meta.arg
         const pending = state.pendingArchives[callId]
         if (pending) {
           state.items.splice(Math.min(pending.index, state.items.length), 0, pending.call)
@@ -93,7 +104,7 @@ const callsSlice = createSlice({
   },
 })
 
-export const { archiveErrorDismissed } = callsSlice.actions
+export const { archiveErrorDismissed, callsReset } = callsSlice.actions
 export const callsReducer = callsSlice.reducer
 
 export const selectCalls = (state: RootState) => state.calls.items

@@ -5,6 +5,10 @@
 }
 
 .app__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 24px;
 }
 
@@ -177,6 +181,10 @@
   border-color: var(--accent);
 }
 
+.button[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+
 .button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -250,4 +258,49 @@
   color: var(--surface);
   background: var(--missed);
   border-color: var(--missed);
+}
+
+.app__actions,
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-menu {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.login {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.login__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 340px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.input {
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }

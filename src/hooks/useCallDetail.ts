@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useCurrentUser } from '../context/authContext'
 import { ApiError, getCall } from '../services/callService'
 import type { CallDetail } from '../types/call'
 import { getErrorMessage } from '../utils/errors'
@@ -10,12 +11,13 @@ export type CallDetailState =
   | { status: 'success'; call: CallDetail }
 
 export function useCallDetail(callId: string): CallDetailState {
+  const { id: userId } = useCurrentUser()
   const [detailState, setDetailState] = useState<CallDetailState>({ status: 'loading' })
 
   useEffect(() => {
     const controller = new AbortController()
 
-    getCall(callId, controller.signal)
+    getCall(userId, callId, controller.signal)
       .then((call) => setDetailState({ status: 'success', call }))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return
@@ -27,7 +29,7 @@ export function useCallDetail(callId: string): CallDetailState {
       })
 
     return () => controller.abort()
-  }, [callId])
+  }, [userId, callId])
 
   return detailState
 }
