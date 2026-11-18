@@ -7,7 +7,7 @@ A React + TypeScript front end for browsing call activity: see the call feed, op
 - **Call feed:** direction, from/to numbers, call type and date for every active call (`GET /calls`)
 - **Call details:** clicking a call opens a panel with full details and notes (`GET /calls/:callId`), with a "not found" message for 404s
 - **Archive:** archives on the server (`PATCH /calls/:callId/archive`) with an **optimistic update**. The call disappears immediately and comes back with an error message if the request fails.
-- **Sign in by name:** each name gets its own feed, because the user id derived from it is sent as `X-User-Id`. Logging out clears the previous user's data.
+- **Sign in by name:** each name gets its own feed, because the user id derived from it is sent as `X-User-Id`. Logging out clears the previous user's data. The password field (with a show/hide toggle) is UI only: the API has no passwords, so it isn't checked or sent.
 - Loading, error and empty states for every request, plus **Try again** when the feed fails to load
 - Light and dark mode: follows the system setting until you toggle it, and the choice is remembered. Keyboard-accessible rows, responsive layout
 

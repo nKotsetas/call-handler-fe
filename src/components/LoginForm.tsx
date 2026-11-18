@@ -1,14 +1,17 @@
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../context/authContext'
+import { PasswordInput } from './PasswordInput'
 
 export function LoginForm() {
   const { login } = useAuth()
   const [name, setName] = useState('')
-  const isEmpty = name.trim() === ''
+  // The API has no passwords, so this is only required in the form and never sent anywhere.
+  const [password, setPassword] = useState('')
+  const isIncomplete = name.trim() === '' || password === ''
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (isEmpty) return
+    if (isIncomplete) return
     login(name)
   }
 
@@ -26,7 +29,14 @@ export function LoginForm() {
           maxLength={80}
           autoFocus
         />
-        <button type="submit" className="button" disabled={isEmpty}>
+        <label htmlFor="login-password">Password</label>
+        <PasswordInput
+          id="login-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          autoComplete="current-password"
+        />
+        <button type="submit" className="button" disabled={isIncomplete}>
           Sign in
         </button>
       </form>
